@@ -446,6 +446,19 @@ BUILD_CONTROLS_SHADOW(pin, PIN_BASED_VM_EXEC_CONTROL)
 BUILD_CONTROLS_SHADOW(exec, CPU_BASED_VM_EXEC_CONTROL)
 BUILD_CONTROLS_SHADOW(secondary_exec, SECONDARY_VM_EXEC_CONTROL)
 
+static inline void tertiary_exec_controls_set(struct vcpu_vmx *vmx, u64 val)
+{
+	if (vmx->loaded_vmcs->controls_shadow.tertiary_exec != val) {
+		vmcs_write64(TERTIARY_VM_EXEC_CONTROL, val);
+		vmx->loaded_vmcs->controls_shadow.tertiary_exec = val;
+	}
+}
+
+static inline u64 tertiary_exec_controls_get(struct vcpu_vmx *vmx)
+{
+	return vmx->loaded_vmcs->controls_shadow.tertiary_exec;
+}
+
 static inline void vmx_register_cache_reset(struct kvm_vcpu *vcpu)
 {
 	vcpu->arch.regs_avail = ~((1 << VCPU_REGS_RIP) | (1 << VCPU_REGS_RSP)
