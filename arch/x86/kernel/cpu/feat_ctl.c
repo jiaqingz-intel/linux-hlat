@@ -15,6 +15,8 @@ enum vmx_feature_leafs {
 	MISC_FEATURES = 0,
 	PRIMARY_CTLS,
 	SECONDARY_CTLS,
+	TERTIARY_CTLS_LOW,
+	TERTIARY_CTLS_HIGH,
 	NR_VMX_FEATURE_WORDS,
 };
 
@@ -41,6 +43,14 @@ static void init_vmx_capabilities(struct cpuinfo_x86 *c)
 
 	rdmsr_safe(MSR_IA32_VMX_PROCBASED_CTLS2, &ign, &supported);
 	c->vmx_capability[SECONDARY_CTLS] = supported;
+
+	/*
+	 * All bits in tertiary exec-control MSR indicates if a feature can be
+	 * turned on. All features enumerated by this MSR can be turned off.
+	 */
+	rdmsr_safe(MSR_IA32_VMX_PROCBASED_CTLS3, &ign, &supported);
+	c->vmx_capability[TERTIARY_CTLS_LOW] = ign;
+	c->vmx_capability[TERTIARY_CTLS_HIGH] = supported;
 
 	rdmsr(MSR_IA32_VMX_PINBASED_CTLS, ign, supported);
 	rdmsr_safe(MSR_IA32_VMX_VMFUNC, &ign, &funcs);
