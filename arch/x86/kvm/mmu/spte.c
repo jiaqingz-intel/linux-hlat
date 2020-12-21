@@ -27,6 +27,8 @@ u64 __read_mostly shadow_mmio_access_mask;
 u64 __read_mostly shadow_present_mask;
 u64 __read_mostly shadow_me_mask;
 u64 __read_mostly shadow_acc_track_mask;
+u64 __read_mostly shadow_pw_mask;
+u64 __read_mostly shadow_vpw_mask;
 
 u64 __read_mostly shadow_nonpresent_or_rsvd_mask;
 u64 __read_mostly shadow_nonpresent_or_rsvd_lower_gfn_mask;
@@ -123,13 +125,19 @@ int make_spte(struct kvm_vcpu *vcpu, unsigned int pte_access, int level,
 		spte |= kvm_x86_ops.get_mt_mask(vcpu, gfn,
 			kvm_is_mmio_pfn(pfn));
 
-	if (host_writable)
+	if (host_writable && !kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_RO))
 		spte |= SPTE_HOST_WRITEABLE;
 	else
 		pte_access &= ~ACC_WRITE_MASK;
 
 	if (!kvm_is_mmio_pfn(pfn))
 		spte |= shadow_me_mask;
+
+	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_PW))
+		spte |= shadow_pw_mask;
+
+	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_VPW))
+		spte |= shadow_vpw_mask;
 
 	spte |= (u64)pfn << PAGE_SHIFT;
 
@@ -261,7 +269,7 @@ EXPORT_SYMBOL_GPL(kvm_mmu_set_mmio_spte_mask);
  */
 void kvm_mmu_set_mask_ptes(u64 user_mask, u64 accessed_mask,
 		u64 dirty_mask, u64 nx_mask, u64 x_mask, u64 p_mask,
-		u64 acc_track_mask, u64 me_mask)
+		u64 acc_track_mask, u64 me_mask, u64 pw_mask, u64 vpw_mask)
 {
 	BUG_ON(!dirty_mask != !accessed_mask);
 	BUG_ON(!accessed_mask && !acc_track_mask);
@@ -275,6 +283,8 @@ void kvm_mmu_set_mask_ptes(u64 user_mask, u64 accessed_mask,
 	shadow_present_mask = p_mask;
 	shadow_acc_track_mask = acc_track_mask;
 	shadow_me_mask = me_mask;
+	shadow_pw_mask = pw_mask;
+	shadow_vpw_mask = vpw_mask;
 }
 EXPORT_SYMBOL_GPL(kvm_mmu_set_mask_ptes);
 
@@ -289,6 +299,8 @@ void kvm_mmu_reset_all_pte_masks(void)
 	shadow_x_mask = 0;
 	shadow_present_mask = 0;
 	shadow_acc_track_mask = 0;
+	shadow_pw_mask = 0;
+	shadow_vpw_mask = 0;
 
 	shadow_phys_bits = kvm_get_shadow_phys_bits();
 
