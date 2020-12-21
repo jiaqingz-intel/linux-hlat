@@ -3640,6 +3640,12 @@ static bool page_fault_handle_page_track(struct kvm_vcpu *vcpu,
 	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_WRITE))
 		return true;
 
+	/*
+	 * trigger virtualization exception on EPT RO fault
+	 */
+	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_RO))
+		kvm_queue_exception(vcpu, VE_VECTOR);
+
 	return false;
 }
 

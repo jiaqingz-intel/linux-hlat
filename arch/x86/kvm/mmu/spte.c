@@ -34,6 +34,8 @@ u64 __read_mostly shadow_mmio_access_mask;
 u64 __read_mostly shadow_present_mask;
 u64 __read_mostly shadow_me_mask;
 u64 __read_mostly shadow_acc_track_mask;
+u64 __read_mostly shadow_pw_mask;
+u64 __read_mostly shadow_vpw_mask;
 
 u64 __read_mostly shadow_nonpresent_or_rsvd_mask;
 u64 __read_mostly shadow_nonpresent_or_rsvd_lower_gfn_mask;
@@ -138,13 +140,19 @@ int make_spte(struct kvm_vcpu *vcpu, unsigned int pte_access, int level,
 		spte |= static_call(kvm_x86_get_mt_mask)(vcpu, gfn,
 			kvm_is_mmio_pfn(pfn));
 
-	if (host_writable)
+	if (host_writable && !kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_RO))
 		spte |= shadow_host_writable_mask;
 	else
 		pte_access &= ~ACC_WRITE_MASK;
 
 	if (!kvm_is_mmio_pfn(pfn))
 		spte |= shadow_me_mask;
+
+	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_PW))
+		spte |= shadow_pw_mask;
+
+	if (kvm_page_track_is_active(vcpu, gfn, KVM_PAGE_TRACK_GUEST_VPW))
+		spte |= shadow_vpw_mask;
 
 	spte |= (u64)pfn << PAGE_SHIFT;
 
@@ -293,7 +301,8 @@ void kvm_mmu_set_mmio_spte_mask(u64 mmio_value, u64 mmio_mask, u64 access_mask)
 }
 EXPORT_SYMBOL_GPL(kvm_mmu_set_mmio_spte_mask);
 
-void kvm_mmu_set_ept_masks(bool has_ad_bits, bool has_exec_only)
+void kvm_mmu_set_ept_masks(bool has_ad_bits, bool has_exec_only,
+			   bool has_pw_bit, bool has_vpw_bit)
 {
 	shadow_user_mask	= VMX_EPT_READABLE_MASK;
 	shadow_accessed_mask	= has_ad_bits ? VMX_EPT_ACCESS_BIT : 0ull;
@@ -303,6 +312,8 @@ void kvm_mmu_set_ept_masks(bool has_ad_bits, bool has_exec_only)
 	shadow_present_mask	= has_exec_only ? 0ull : VMX_EPT_READABLE_MASK;
 	shadow_acc_track_mask	= VMX_EPT_RWX_MASK;
 	shadow_me_mask		= 0ull;
+	shadow_pw_mask		= has_pw_bit ? VMX_EPT_PW_BIT : 0ull;
+	shadow_vpw_mask		= has_vpw_bit ? VMX_EPT_VPW_BIT : 0ull;
 
 	shadow_host_writable_mask = EPT_SPTE_HOST_WRITABLE;
 	shadow_mmu_writable_mask  = EPT_SPTE_MMU_WRITABLE;
@@ -355,6 +366,8 @@ void kvm_mmu_reset_all_pte_masks(void)
 	shadow_present_mask	= PT_PRESENT_MASK;
 	shadow_acc_track_mask	= 0;
 	shadow_me_mask		= sme_me_mask;
+	shadow_pw_mask		= 0;
+	shadow_vpw_mask		= 0;
 
 	shadow_host_writable_mask = DEFAULT_SPTE_HOST_WRITEABLE;
 	shadow_mmu_writable_mask  = DEFAULT_SPTE_MMU_WRITEABLE;

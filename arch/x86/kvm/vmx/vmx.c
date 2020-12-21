@@ -5436,6 +5436,15 @@ static int handle_ept_violation(struct kvm_vcpu *vcpu)
 	vcpu->arch.exit_qualification = exit_qualification;
 
 	/*
+	 * Inject a #VE on VPW violation, which means a memory access in guest
+	 * violates guest's configuration of PW/VPW. KVM cannot fix it.
+	 */
+	if (exit_qualification & EPT_VIOLATION_VPW) {
+		kvm_queue_exception(vcpu, VE_VECTOR);
+		return 1;
+	}
+
+	/*
 	 * Check that the GPA doesn't exceed physical memory limits, as that is
 	 * a guest page fault.  We have to emulate the instruction here, because
 	 * if the illegal address is that of a paging structure, then
@@ -7917,7 +7926,9 @@ static __init int hardware_setup(void)
 
 	if (enable_ept)
 		kvm_mmu_set_ept_masks(enable_ept_ad_bits,
-				      cpu_has_vmx_ept_execute_only());
+				      cpu_has_vmx_ept_execute_only(),
+				      cpu_has_vmx_ept_pw_bit(),
+				      cpu_has_vmx_ept_vpw_bit());
 
 	if (!enable_ept)
 		ept_lpage_level = 0;
