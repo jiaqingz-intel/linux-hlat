@@ -566,6 +566,7 @@ DECLARE_IDTENTRY(X86_TRAP_OLD_MF,	exc_coproc_segment_overrun);
 DECLARE_IDTENTRY(X86_TRAP_SPURIOUS,	exc_spurious_interrupt_bug);
 DECLARE_IDTENTRY(X86_TRAP_MF,		exc_coprocessor_error);
 DECLARE_IDTENTRY(X86_TRAP_XF,		exc_simd_coprocessor_error);
+DECLARE_IDTENTRY(X86_TRAP_VE,		exc_virt);
 
 /* 32bit software IRET trap. Do not emit ASM code */
 DECLARE_IDTENTRY_SW(X86_TRAP_IRET,	iret_error);

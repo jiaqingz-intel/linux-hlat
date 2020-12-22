@@ -205,6 +205,12 @@ DEFINE_IDTENTRY(exc_overflow)
 	do_error_trap(regs, 0, "overflow", X86_TRAP_OF, SIGSEGV, 0, NULL);
 }
 
+DEFINE_IDTENTRY(exc_virt)
+{
+	pr_emerg("Virtualization Exception!!!\n");
+	BUG();
+}
+
 #ifdef CONFIG_X86_F00F_BUG
 void handle_invalid_op(struct pt_regs *regs)
 #else
