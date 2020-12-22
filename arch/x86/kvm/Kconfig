@@ -96,6 +96,12 @@ config X86_SGX_KVM
 
 	  If unsure, say N.
 
+config KVM_INTEL_HLAT
+	bool "Intel Hypervisor-managed Linear Address Translation (HLAT) support"
+	depends on KVM_INTEL && X86_64
+	help
+	  Provides support for VMs to use HLAT features on Intel processors.
+
 config KVM_AMD
 	tristate "KVM for AMD processors support"
 	depends on KVM
