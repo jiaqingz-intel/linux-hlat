@@ -52,6 +52,7 @@
 #include "evmcs.h"
 #include "hyperv.h"
 #include "irq.h"
+#include "hlat.h"
 #include "kvm_cache_regs.h"
 #include "lapic.h"
 #include "mmu.h"
@@ -7817,6 +7818,10 @@ static struct kvm_x86_ops vmx_x86_ops __initdata = {
 	.complete_emulated_msr = kvm_complete_insn_gp,
 
 	.vcpu_deliver_sipi_vector = kvm_vcpu_deliver_sipi_vector,
+
+#ifdef CONFIG_KVM_INTEL_HLAT
+	.handle_hlat = kvm_hlat_handle_hypercall,
+#endif
 };
 
 static __init int hardware_setup(void)

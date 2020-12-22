@@ -838,6 +838,9 @@ struct kvm_vcpu_arch {
 
 	/* Protected Guests */
 	bool guest_state_protected;
+
+	/* HLAT root pointer */
+	gpa_t hlat_pointer;
 };
 
 struct kvm_lpage_info {
@@ -1352,6 +1355,10 @@ struct kvm_x86_ops {
 	int (*complete_emulated_msr)(struct kvm_vcpu *vcpu, int err);
 
 	void (*vcpu_deliver_sipi_vector)(struct kvm_vcpu *vcpu, u8 vector);
+
+	int (*handle_hlat)(struct kvm_vcpu *vcpu, unsigned long subop,
+			   unsigned long arg1, unsigned long arg2,
+			   unsigned long arg3);
 };
 
 struct kvm_x86_nested_ops {
