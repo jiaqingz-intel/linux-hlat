@@ -84,6 +84,12 @@ config KVM_INTEL
 	  To compile this as a module, choose M here: the module
 	  will be called kvm-intel.
 
+config KVM_INTEL_HLAT
+	bool "Intel Hypervisor-managed Linear Address Translation (HLAT) support"
+	depends on KVM_INTEL && X86_64
+	help
+	  Provides support for VMs to use HLAT features on Intel processors.
+
 config KVM_AMD
 	tristate "KVM for AMD processors support"
 	depends on KVM
