@@ -90,6 +90,14 @@ config KVM_INTEL_HLAT
 	help
 	  Provides support for VMs to use HLAT features on Intel processors.
 
+config KVM_INTEL_HLAT_DEBUG
+	bool "HLAT debugging support"
+	depends on KVM_INTEL_HLAT
+	help
+	  This option enables the host to perform a guest page table walk
+	  and print it in host dmesg on EPT violations caused by
+	  Verify Paging-Write.
+
 config KVM_AMD
 	tristate "KVM for AMD processors support"
 	depends on KVM

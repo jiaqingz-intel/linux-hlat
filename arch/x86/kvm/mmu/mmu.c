@@ -5985,3 +5985,14 @@ void kvm_mmu_pre_destroy_vm(struct kvm *kvm)
 	if (kvm->arch.nx_lpage_recovery_thread)
 		kthread_stop(kvm->arch.nx_lpage_recovery_thread);
 }
+
+void kvm_mmu_dump_gpa(struct kvm_vcpu *vcpu, gpa_t gpa)
+{
+	struct kvm_shadow_walk_iterator it;
+
+	for_each_shadow_entry(vcpu, gpa, it) {
+		pr_info("gpa %llx level %d sptep %p spte %llx\n",
+				gpa, it.level, it.sptep, *it.sptep);
+	}
+}
+EXPORT_SYMBOL_GPL(kvm_mmu_dump_gpa);
