@@ -2146,6 +2146,10 @@ void __weak module_arch_freeing_init(struct module *mod)
 {
 }
 
+void __weak module_arch_freeing_core(struct module *mod)
+{
+}
+
 /* Free a module, remove from lists, etc. */
 static void free_module(struct module *mod)
 {
@@ -2197,6 +2201,7 @@ static void free_module(struct module *mod)
 	lockdep_free_key_range(mod->core_layout.base, mod->core_layout.size);
 
 	/* Finally, free the core (containing the module structure) */
+	module_arch_freeing_core(mod);
 	module_memfree(mod->core_layout.base);
 }
 
@@ -3366,6 +3371,7 @@ static int move_module(struct module *mod, struct load_info *info)
 		 */
 		kmemleak_ignore(ptr);
 		if (!ptr) {
+			module_arch_freeing_core(mod);
 			module_memfree(mod->core_layout.base);
 			return -ENOMEM;
 		}
@@ -3545,6 +3551,7 @@ static void module_deallocate(struct module *mod, struct load_info *info)
 {
 	percpu_modfree(mod);
 	module_arch_freeing_init(mod);
+	module_arch_freeing_core(mod);
 	module_memfree(mod->init_layout.base);
 	module_memfree(mod->core_layout.base);
 }
