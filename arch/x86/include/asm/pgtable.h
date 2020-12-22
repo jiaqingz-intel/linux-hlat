@@ -767,6 +767,11 @@ static inline int pte_present(pte_t a)
 	return pte_flags(a) & (_PAGE_PRESENT | _PAGE_PROTNONE);
 }
 
+static inline int pte_restart(pte_t a)
+{
+	return pte_flags(a) & _PAGE_RESTART;
+}
+
 #ifdef CONFIG_ARCH_HAS_PTE_DEVMAP
 static inline int pte_devmap(pte_t a)
 {
@@ -796,6 +801,11 @@ static inline int pmd_present(pmd_t pmd)
 	 * _PAGE_PRESENT bit is clear).
 	 */
 	return pmd_flags(pmd) & (_PAGE_PRESENT | _PAGE_PROTNONE | _PAGE_PSE);
+}
+
+static inline int pmd_restart(pmd_t pmd)
+{
+	return pmd_flags(pmd) & _PAGE_RESTART;
 }
 
 #ifdef CONFIG_NUMA_BALANCING
@@ -865,6 +875,11 @@ static inline int pud_present(pud_t pud)
 	return pud_flags(pud) & _PAGE_PRESENT;
 }
 
+static inline int pud_restart(pud_t pud)
+{
+	return pud_flags(pud) & _PAGE_RESTART;
+}
+
 static inline unsigned long pud_page_vaddr(pud_t pud)
 {
 	return (unsigned long)__va(pud_val(pud) & pud_pfn_mask(pud));
@@ -906,6 +921,11 @@ static inline int p4d_present(p4d_t p4d)
 	return p4d_flags(p4d) & _PAGE_PRESENT;
 }
 
+static inline int p4d_restart(p4d_t p4d)
+{
+	return p4d_flags(p4d) & _PAGE_RESTART;
+}
+
 static inline unsigned long p4d_page_vaddr(p4d_t p4d)
 {
 	return (unsigned long)__va(p4d_val(p4d) & p4d_pfn_mask(p4d));
@@ -939,6 +959,13 @@ static inline int pgd_present(pgd_t pgd)
 	if (!pgtable_l5_enabled())
 		return 1;
 	return pgd_flags(pgd) & _PAGE_PRESENT;
+}
+
+static inline int pgd_restart(pgd_t pgd)
+{
+	if (!pgtable_l5_enabled())
+		return 0;
+	return pgd_flags(pgd) & _PAGE_RESTART;
 }
 
 static inline unsigned long pgd_page_vaddr(pgd_t pgd)
