@@ -805,6 +805,9 @@ struct kvm_vcpu_arch {
 		 */
 		bool enforce;
 	} pv_cpuid;
+
+	/* HLAT root pointer */
+	gpa_t hlat_pointer;
 };
 
 struct kvm_lpage_info {
@@ -1280,6 +1283,10 @@ struct kvm_x86_ops {
 
 	void (*migrate_timers)(struct kvm_vcpu *vcpu);
 	void (*msr_filter_changed)(struct kvm_vcpu *vcpu);
+
+	int (*handle_hlat)(struct kvm_vcpu *vcpu, unsigned long subop,
+			   unsigned long arg1, unsigned long arg2,
+			   unsigned long arg3);
 };
 
 struct kvm_x86_nested_ops {

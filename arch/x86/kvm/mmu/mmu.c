@@ -5476,14 +5476,13 @@ void kvm_mmu_uninit_vm(struct kvm *kvm)
 	kvm_mmu_uninit_tdp_mmu(kvm);
 }
 
-void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
+void kvm_zap_gfn_range_locked(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
 {
 	struct kvm_memslots *slots;
 	struct kvm_memory_slot *memslot;
 	int i;
 	bool flush;
 
-	spin_lock(&kvm->mmu_lock);
 	for (i = 0; i < KVM_ADDRESS_SPACE_NUM; i++) {
 		slots = __kvm_memslots(kvm, i);
 		kvm_for_each_memslot(memslot, slots) {
@@ -5506,7 +5505,13 @@ void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
 		if (flush)
 			kvm_flush_remote_tlbs(kvm);
 	}
+}
+EXPORT_SYMBOL_GPL(kvm_zap_gfn_range_locked);
 
+void kvm_zap_gfn_range(struct kvm *kvm, gfn_t gfn_start, gfn_t gfn_end)
+{
+	spin_lock(&kvm->mmu_lock);
+	kvm_zap_gfn_range_locked(kvm, gfn_start, gfn_end);
 	spin_unlock(&kvm->mmu_lock);
 }
 

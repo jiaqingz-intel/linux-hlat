@@ -8124,6 +8124,12 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 		kvm_sched_yield(vcpu->kvm, a0);
 		ret = 0;
 		break;
+	case KVM_HC_HLAT:
+		if (!guest_pv_has(vcpu, KVM_FEATURE_HLAT) || !kvm_x86_ops.handle_hlat)
+			break;
+
+		ret = kvm_x86_ops.handle_hlat(vcpu, a0, a1, a2, a3);
+		break;
 	default:
 		ret = -KVM_ENOSYS;
 		break;

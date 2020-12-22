@@ -154,6 +154,7 @@ bool kvm_page_track_is_active(struct kvm_vcpu *vcpu, gfn_t gfn,
 	index = gfn_to_index(gfn, slot->base_gfn, PG_LEVEL_4K);
 	return !!READ_ONCE(slot->arch.gfn_track[mode][index]);
 }
+EXPORT_SYMBOL_GPL(kvm_page_track_is_active);
 
 void kvm_page_track_cleanup(struct kvm *kvm)
 {
