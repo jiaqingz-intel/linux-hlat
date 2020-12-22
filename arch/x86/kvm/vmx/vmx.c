@@ -5397,6 +5397,9 @@ static int handle_ept_violation(struct kvm_vcpu *vcpu)
 	 * violates guest's configuration of PW/VPW. KVM cannot fix it.
 	 */
 	if (exit_qualification & EPT_VIOLATION_VPW) {
+#ifdef CONFIG_KVM_INTEL_HLAT_DEBUG
+		debug_vpw_violation(vcpu);
+#endif
 		kvm_queue_exception(vcpu, VE_VECTOR);
 		return 1;
 	}

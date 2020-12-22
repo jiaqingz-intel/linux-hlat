@@ -1571,6 +1571,8 @@ void kvm_mmu_new_pgd(struct kvm_vcpu *vcpu, gpa_t new_pgd, bool skip_tlb_flush,
 void kvm_configure_mmu(bool enable_tdp, int tdp_max_root_level,
 		       int tdp_huge_page_level);
 
+void kvm_mmu_dump_gpa(struct kvm_vcpu *vcpu, gpa_t gpa);
+
 static inline u16 kvm_read_ldt(void)
 {
 	u16 ldt;

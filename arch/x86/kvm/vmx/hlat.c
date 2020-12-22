@@ -206,3 +206,87 @@ int kvm_hlat_handle_hypercall(struct kvm_vcpu *vcpu, unsigned long subop,
 
 	return ret;
 }
+
+
+#ifdef CONFIG_KVM_INTEL_HLAT_DEBUG
+#include "../cpuid.h"
+
+spinlock_t printk_lock;
+
+static void dump_guest_pagetable(struct kvm_vcpu *vcpu, gpa_t base_gpa, gva_t gva, bool restart)
+{
+	gpa_t pgd_gpa, p4d_gpa, pud_gpa, pmd_gpa, pte_gpa, page_gpa;
+	pgd_t pgd;
+	p4d_t p4d;
+	pud_t pud;
+	pmd_t pmd;
+	pte_t pte;
+
+	if (restart)
+		pr_info("... HLATP: %llx ...\n", base_gpa);
+	else
+		pr_info("... CR3: %llx ...\n", base_gpa);
+
+	kvm_mmu_dump_gpa(vcpu, base_gpa);
+
+	pgd_gpa = base_gpa + pgd_index(gva) * sizeof(pgd);
+	kvm_vcpu_read_guest(vcpu, pgd_gpa, &pgd, sizeof(pgd));
+	pr_info("PGD %lx at %llx\n", pgd_val(pgd), pgd_gpa);
+	kvm_mmu_dump_gpa(vcpu, pgd_gpa);
+	if (!pgd_present(pgd) || (restart && pgd_restart(pgd)))
+		return;
+
+	p4d_gpa = kvm_cpu_cap_get(X86_FEATURE_LA57) ?
+			((pgd_pfn(pgd) << PAGE_SHIFT) + p4d_index(gva) * sizeof(p4d)) : pgd_gpa;
+	kvm_vcpu_read_guest(vcpu, p4d_gpa, &p4d, sizeof(p4d));
+	pr_info("P4D %lx at %llx\n", p4d_val(p4d), p4d_gpa);
+	kvm_mmu_dump_gpa(vcpu, p4d_gpa);
+	if (!p4d_present(p4d) || p4d_large(p4d) || (restart && p4d_restart(p4d)))
+		return;
+
+	pud_gpa = (p4d_pfn(p4d) << PAGE_SHIFT) + pud_index(gva) * sizeof(pud);
+	kvm_vcpu_read_guest(vcpu, pud_gpa, &pud, sizeof(pud));
+	pr_info("PUD %lx at %llx\n", pud_val(pud), pud_gpa);
+	kvm_mmu_dump_gpa(vcpu, pud_gpa);
+	if (!pud_present(pud) || pud_large(pud) || (restart && pud_restart(pud)))
+		return;
+
+	pmd_gpa = (pud_pfn(pud) << PAGE_SHIFT) + pmd_index(gva) * sizeof(pmd);
+	kvm_vcpu_read_guest(vcpu, pmd_gpa, &pmd, sizeof(pmd));
+	pr_info("PMD %lx at %llx\n", pmd_val(pmd), pmd_gpa);
+	kvm_mmu_dump_gpa(vcpu, pmd_gpa);
+	if (!pmd_present(pmd) || pmd_large(pmd) || (restart && pmd_restart(pmd)))
+		return;
+
+	pte_gpa = (pmd_pfn(pmd) << PAGE_SHIFT) + pte_index(gva) * sizeof(pte);
+	kvm_vcpu_read_guest(vcpu, pte_gpa, &pte, sizeof(pte));
+	pr_info("PTE %lx at %llx\n", pte_val(pte), pte_gpa);
+	kvm_mmu_dump_gpa(vcpu, pte_gpa);
+	if (!pte_present(pte) || (restart && pte_restart(pte)))
+		return;
+
+	page_gpa = pte_pfn(pte) << PAGE_SHIFT;
+	pr_info("PAGE at %llx\n", page_gpa);
+	kvm_mmu_dump_gpa(vcpu, page_gpa);
+}
+
+int debug_vpw_violation(struct kvm_vcpu *vcpu)
+{
+	gpa_t gpa = vmcs_read64(GUEST_PHYSICAL_ADDRESS);
+	gva_t gva = vmcs_readl(GUEST_LINEAR_ADDRESS);
+	gpa_t hlatp = vcpu->arch.hlat_pointer;
+	gpa_t cr3 = (kvm_read_cr3(vcpu) >> PAGE_SHIFT) << PAGE_SHIFT;
+
+	spin_lock(&printk_lock);
+
+	pr_info("*** VPW violation when accessing GVA %lx GPA %llx ***\n", gva, gpa);
+	kvm_mmu_dump_gpa(vcpu, gpa);
+	dump_guest_pagetable(vcpu, hlatp, gva, 1);
+	dump_guest_pagetable(vcpu, cr3, gva, 0);
+
+	spin_unlock(&printk_lock);
+
+	return 1;
+}
+
+#endif
