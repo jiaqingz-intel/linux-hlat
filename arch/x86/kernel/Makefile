@@ -124,6 +124,7 @@ obj-$(CONFIG_PARAVIRT)		+= paravirt.o
 obj-$(CONFIG_PARAVIRT_SPINLOCKS)+= paravirt-spinlocks.o
 obj-$(CONFIG_PARAVIRT_CLOCK)	+= pvclock.o
 obj-$(CONFIG_X86_PMEM_LEGACY_DEVICE) += pmem.o
+obj-$(CONFIG_KVM_GUEST_HLAT) 	+= kvm_hlat.o
 
 obj-$(CONFIG_JAILHOUSE_GUEST)	+= jailhouse.o
 

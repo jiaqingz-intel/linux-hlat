@@ -830,6 +830,12 @@ config KVM_GUEST
 	  underlying device model, the host provides the guest with
 	  timing infrastructure such as time of day, and system time
 
+config KVM_GUEST_HLAT
+	bool "KVM Guest HLAT support"
+	depends on KVM_GUEST && X86_64
+	help
+	  This options enables kernel to use HLAT page table.
+
 config ARCH_CPUIDLE_HALTPOLL
 	def_bool n
 	prompt "Disable host haltpoll when loading haltpoll driver"

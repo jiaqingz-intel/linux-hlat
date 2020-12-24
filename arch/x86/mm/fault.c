@@ -32,6 +32,7 @@
 #include <asm/pgtable_areas.h>		/* VMALLOC_START, ...		*/
 #include <asm/kvm_para.h>		/* kvm_handle_async_pf		*/
 #include <asm/vdso.h>			/* fixup_vdso_exception()	*/
+#include <asm/kvm_hlat.h>		/* hlat_root_va()		*/
 
 #define CREATE_TRACE_POINTS
 #include <asm/trace/exceptions.h>
@@ -344,21 +345,27 @@ static int bad_address(void *p)
 	return get_kernel_nofault(dummy, (unsigned long *)p);
 }
 
-static void dump_pagetable(unsigned long address)
+static void dump_pagetable_in_root(pgd_t *base, unsigned long address, bool restart)
 {
-	pgd_t *base = __va(read_cr3_pa());
 	pgd_t *pgd = base + pgd_index(address);
 	p4d_t *p4d;
 	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *pte;
 
+	pr_info("VADDR %lx ", address);
+
+	if (restart)
+		pr_info("HLAT: ");
+	else
+		pr_info("CR3: ");
+
 	if (bad_address(pgd))
 		goto bad;
 
 	pr_info("PGD %lx ", pgd_val(*pgd));
 
-	if (!pgd_present(*pgd))
+	if (!pgd_present(*pgd) || (restart && pgd_restart(*pgd)))
 		goto out;
 
 	p4d = p4d_offset(pgd, address);
@@ -366,7 +373,7 @@ static void dump_pagetable(unsigned long address)
 		goto bad;
 
 	pr_cont("P4D %lx ", p4d_val(*p4d));
-	if (!p4d_present(*p4d) || p4d_large(*p4d))
+	if (!p4d_present(*p4d) || p4d_large(*p4d) || (restart && p4d_restart(*p4d)))
 		goto out;
 
 	pud = pud_offset(p4d, address);
@@ -374,7 +381,7 @@ static void dump_pagetable(unsigned long address)
 		goto bad;
 
 	pr_cont("PUD %lx ", pud_val(*pud));
-	if (!pud_present(*pud) || pud_large(*pud))
+	if (!pud_present(*pud) || pud_large(*pud) || (restart && pud_restart(*pud)))
 		goto out;
 
 	pmd = pmd_offset(pud, address);
@@ -382,7 +389,7 @@ static void dump_pagetable(unsigned long address)
 		goto bad;
 
 	pr_cont("PMD %lx ", pmd_val(*pmd));
-	if (!pmd_present(*pmd) || pmd_large(*pmd))
+	if (!pmd_present(*pmd) || pmd_large(*pmd) || (restart && pmd_restart(*pmd)))
 		goto out;
 
 	pte = pte_offset_kernel(pmd, address);
@@ -394,9 +401,17 @@ out:
 	pr_cont("\n");
 	return;
 bad:
-	pr_info("BAD\n");
+	pr_info("BAD ADDR!\n");
 }
 
+void dump_pagetable(unsigned long address)
+{
+#ifdef CONFIG_KVM_GUEST_HLAT
+	if (hlat_root_va())
+		dump_pagetable_in_root((void *)hlat_root_va(), address, 1);
+#endif
+	dump_pagetable_in_root(__va(read_cr3_pa()), address, 0);
+}
 #endif /* CONFIG_X86_64 */
 
 /*
@@ -997,7 +1012,7 @@ static int spurious_kernel_fault_check(unsigned long error_code, pte_t *pte)
  * (Optional Invalidation).
  */
 static noinline int
-spurious_kernel_fault(unsigned long error_code, unsigned long address)
+spurious_kernel_fault_in_root(pgd_t *root, unsigned long error_code, unsigned long address)
 {
 	pgd_t *pgd;
 	p4d_t *p4d;
@@ -1019,13 +1034,19 @@ spurious_kernel_fault(unsigned long error_code, unsigned long address)
 	    error_code != (X86_PF_INSTR | X86_PF_PROT))
 		return 0;
 
-	pgd = init_mm.pgd + pgd_index(address);
+	pgd = root + pgd_index(address);
 	if (!pgd_present(*pgd))
 		return 0;
+
+	if (pgd_restart(*pgd))
+		return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
 
 	p4d = p4d_offset(pgd, address);
 	if (!p4d_present(*p4d))
 		return 0;
+
+	if (p4d_restart(*p4d))
+		return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
 
 	if (p4d_large(*p4d))
 		return spurious_kernel_fault_check(error_code, (pte_t *) p4d);
@@ -1034,6 +1055,9 @@ spurious_kernel_fault(unsigned long error_code, unsigned long address)
 	if (!pud_present(*pud))
 		return 0;
 
+	if (pud_restart(*pud))
+		return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
+
 	if (pud_large(*pud))
 		return spurious_kernel_fault_check(error_code, (pte_t *) pud);
 
@@ -1041,12 +1065,18 @@ spurious_kernel_fault(unsigned long error_code, unsigned long address)
 	if (!pmd_present(*pmd))
 		return 0;
 
+	if (pmd_restart(*pmd))
+		return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
+
 	if (pmd_large(*pmd))
 		return spurious_kernel_fault_check(error_code, (pte_t *) pmd);
 
 	pte = pte_offset_kernel(pmd, address);
 	if (!pte_present(*pte))
 		return 0;
+
+	if (pte_restart(*pte))
+		return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
 
 	ret = spurious_kernel_fault_check(error_code, pte);
 	if (!ret)
@@ -1060,6 +1090,16 @@ spurious_kernel_fault(unsigned long error_code, unsigned long address)
 	WARN_ONCE(!ret, "PMD has incorrect permission bits\n");
 
 	return ret;
+}
+
+static noinline int
+spurious_kernel_fault(unsigned long error_code, unsigned long address)
+{
+#ifdef CONFIG_KVM_GUEST_HLAT
+	if (hlat_root_va())
+		return spurious_kernel_fault_in_root((void *)hlat_root_va(), error_code, address);
+#endif
+	return spurious_kernel_fault_in_root(init_mm.pgd, error_code, address);
 }
 NOKPROBE_SYMBOL(spurious_kernel_fault);
 
