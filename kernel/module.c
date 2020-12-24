@@ -42,6 +42,7 @@
 #include <linux/uaccess.h>
 #include <asm/cacheflush.h>
 #include <linux/set_memory.h>
+#include <asm/kvm_hlat.h>
 #include <asm/mmu_context.h>
 #include <linux/license.h>
 #include <asm/sections.h>
@@ -1960,10 +1961,21 @@ static void frob_text(const struct module_layout *layout,
 		   layout->text_size >> PAGE_SHIFT);
 }
 
+static void _module_enable_x(const struct module *mod,
+			int (*set_memory)(unsigned long start, int num_pages))
+{
+	frob_text(&mod->core_layout, set_memory);
+	frob_text(&mod->init_layout, set_memory);
+}
+
 static void module_enable_x(const struct module *mod)
 {
-	frob_text(&mod->core_layout, set_memory_x);
-	frob_text(&mod->init_layout, set_memory_x);
+	_module_enable_x(mod, set_memory_x);
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+	pr_info("kvm_hlat: setting module %s text section to executable", mod->name);
+	_module_enable_x(mod, hlat_set_x);
+#endif
 }
 #else /* !CONFIG_ARCH_HAS_STRICT_MODULE_RWX */
 static void module_enable_x(const struct module *mod) { }
@@ -2000,6 +2012,19 @@ static void frob_writable_data(const struct module_layout *layout,
 		   (layout->size - layout->ro_after_init_size) >> PAGE_SHIFT);
 }
 
+static void _module_enable_ro(const struct module *mod, bool after_init,
+			int (*set_memory)(unsigned long start, int num_pages))
+{
+	frob_text(&mod->core_layout, set_memory);
+
+	frob_rodata(&mod->core_layout, set_memory);
+	frob_text(&mod->init_layout, set_memory);
+	frob_rodata(&mod->init_layout, set_memory);
+
+	if (after_init)
+		frob_ro_after_init(&mod->core_layout, set_memory);
+}
+
 static void module_enable_ro(const struct module *mod, bool after_init)
 {
 	if (!rodata_enabled)
@@ -2007,23 +2032,36 @@ static void module_enable_ro(const struct module *mod, bool after_init)
 
 	set_vm_flush_reset_perms(mod->core_layout.base);
 	set_vm_flush_reset_perms(mod->init_layout.base);
-	frob_text(&mod->core_layout, set_memory_ro);
+	_module_enable_ro(mod, after_init, set_memory_ro);
 
-	frob_rodata(&mod->core_layout, set_memory_ro);
-	frob_text(&mod->init_layout, set_memory_ro);
-	frob_rodata(&mod->init_layout, set_memory_ro);
+#ifdef CONFIG_KVM_GUEST_HLAT
+	pr_info("kvm_hlat: setting module %s text and rodata sections to read-only", mod->name);
+	_module_enable_ro(mod, after_init, hlat_set_ro);
+#endif
+}
 
-	if (after_init)
-		frob_ro_after_init(&mod->core_layout, set_memory_ro);
+static void _module_enable_nx(const struct module *mod, bool hlat,
+			int (*set_memory)(unsigned long start, int num_pages))
+{
+	frob_rodata(&mod->core_layout, set_memory);
+	frob_ro_after_init(&mod->core_layout, set_memory);
+	frob_rodata(&mod->init_layout, set_memory);
+
+	/* Writable data should not be mapped to HLAT page table */
+	if (!hlat) {
+		frob_writable_data(&mod->core_layout, set_memory);
+		frob_writable_data(&mod->init_layout, set_memory);
+	}
 }
 
 static void module_enable_nx(const struct module *mod)
 {
-	frob_rodata(&mod->core_layout, set_memory_nx);
-	frob_ro_after_init(&mod->core_layout, set_memory_nx);
-	frob_writable_data(&mod->core_layout, set_memory_nx);
-	frob_rodata(&mod->init_layout, set_memory_nx);
-	frob_writable_data(&mod->init_layout, set_memory_nx);
+	_module_enable_nx(mod, false, set_memory_nx);
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+	pr_info("kvm_hlat: setting module %s rodata and data sections to non-executable", mod->name);
+	_module_enable_nx(mod, true, hlat_set_nx);
+#endif
 }
 
 static int module_enforce_rwx_sections(Elf_Ehdr *hdr, Elf_Shdr *sechdrs,
