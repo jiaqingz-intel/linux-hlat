@@ -24,6 +24,7 @@
 #include <asm/page.h>
 #include <asm/setup.h>
 #include <asm/unwind.h>
+#include <asm/kvm_hlat.h>
 
 #if 0
 #define DEBUGP(fmt, ...)				\
@@ -301,3 +302,15 @@ void module_arch_cleanup(struct module *mod)
 {
 	alternatives_smp_module_del(mod);
 }
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+void module_arch_freeing_init(struct module *mod)
+{
+	hlat_unmap((u64)mod->init_layout.base, mod->init_layout.size >> PAGE_SHIFT);
+}
+
+void module_arch_freeing_core(struct module *mod)
+{
+	hlat_unmap((u64)mod->core_layout.base, mod->core_layout.size >> PAGE_SHIFT);
+}
+#endif

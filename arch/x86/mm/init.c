@@ -9,6 +9,7 @@
 #include <linux/sched/task.h>
 
 #include <asm/set_memory.h>
+#include <asm/kvm_hlat.h>
 #include <asm/e820/api.h>
 #include <asm/init.h>
 #include <asm/page.h>
@@ -884,6 +885,9 @@ void free_init_pages(const char *what, unsigned long begin, unsigned long end)
 		 * we are going to free part of that, we need to make that
 		 * writeable and non-executable first.
 		 */
+#ifdef CONFIG_KVM_GUEST_HLAT
+		hlat_unmap(begin, (end - begin) >> PAGE_SHIFT);
+#endif
 		set_memory_nx(begin, (end - begin) >> PAGE_SHIFT);
 		set_memory_rw(begin, (end - begin) >> PAGE_SHIFT);
 

@@ -50,6 +50,7 @@
 #include <asm/kdebug.h>
 #include <asm/numa.h>
 #include <asm/set_memory.h>
+#include <asm/kvm_hlat.h>
 #include <asm/init.h>
 #include <asm/uv/uv.h>
 #include <asm/setup.h>
@@ -1379,6 +1380,9 @@ void mark_rodata_ro(void)
 	printk(KERN_INFO "Write protecting the kernel read-only data: %luk\n",
 	       (end - start) >> 10);
 	set_memory_ro(start, (end - start) >> PAGE_SHIFT);
+#ifdef CONFIG_KVM_GUEST_HLAT
+	hlat_set_ro(start, (end - start) >> PAGE_SHIFT);
+#endif
 
 	kernel_set_to_readonly = 1;
 
@@ -1396,6 +1400,10 @@ void mark_rodata_ro(void)
 	 */
 	all_end = roundup((unsigned long)_brk_end, PMD_SIZE);
 	set_memory_nx(text_end, (all_end - text_end) >> PAGE_SHIFT);
+#ifdef CONFIG_KVM_GUEST_HLAT
+	// only protect rodata section in hlat
+	hlat_set_nx(text_end, (end - text_end) >> PAGE_SHIFT);
+#endif
 
 	set_ftrace_ops_ro();
 
