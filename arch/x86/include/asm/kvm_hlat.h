@@ -15,4 +15,24 @@
 #define KVM_HLAT_MAP		0x12
 #define KVM_HLAT_UNMAP		0x13
 
+#define MSR_CTLS3_HLAT_BIT	(1ull << 1)
+#define MSR_CTLS3_PW_BIT	(1ull << 2)
+#define MSR_CTLS3_VPW_BIT	(1ull << 3)
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+unsigned long hlat_root_va(void);
+int hlat_set_ro(unsigned long addr, int numpages);
+int hlat_set_rw(unsigned long addr, int numpages);
+int hlat_set_x(unsigned long addr, int numpages);
+int hlat_set_nx(unsigned long addr, int numpages);
+int hlat_unmap(unsigned long addr, int numpages);
+#else
+static inline unsigned long hlat_root_va(void) { return 0; }
+static inline int hlat_set_ro(unsigned long addr, int numpages) { return 0; }
+static inline int hlat_set_rw(unsigned long addr, int numpages) { return 0; }
+static inline int hlat_set_x(unsigned long addr, int numpages) { return 0; }
+static inline int hlat_set_nx(unsigned long addr, int numpages) { return 0; }
+static inline int hlat_unmap(unsigned long addr, int numpages) { return 0; }
+#endif
+
 #endif /* _ASM_X86_KVM_HLAT_H */
