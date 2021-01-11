@@ -1362,6 +1362,8 @@ void mark_rodata_ro(void)
 	// only protect rodata section in hlat
 	pr_info("kvm_hlat: setting kernel rodata section to non-executable");
 	hlat_set_nx(text_end, (end - text_end) >> PAGE_SHIFT);
+
+	hlat_vdso_workaround_apply();
 #endif
 
 	set_ftrace_ops_ro();

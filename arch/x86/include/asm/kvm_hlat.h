@@ -2,6 +2,7 @@
 #define _ASM_X86_KVM_HLAT_H
 
 #include <asm/kvm_para.h>
+#include <asm/vdso.h>
 #include <uapi/linux/kvm_para.h>
 
 #define KVM_PAT_RO		1ULL
@@ -21,6 +22,8 @@
 
 #ifdef CONFIG_KVM_GUEST_HLAT
 unsigned long hlat_root_va(void);
+void hlat_vdso_workaround_prepare(const struct vdso_image *image);
+void hlat_vdso_workaround_apply(void);
 int hlat_set_ro(unsigned long addr, int numpages);
 int hlat_set_rw(unsigned long addr, int numpages);
 int hlat_set_x(unsigned long addr, int numpages);
