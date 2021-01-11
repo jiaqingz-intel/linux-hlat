@@ -25,6 +25,7 @@
 #include <asm/page.h>
 #include <asm/desc.h>
 #include <asm/cpufeature.h>
+#include <asm/kvm_hlat.h>
 #include <clocksource/hyperv_timer.h>
 
 #undef _ASM_X86_VVAR_H
@@ -47,6 +48,10 @@ unsigned int __read_mostly vdso64_enabled = 1;
 void __init init_vdso_image(const struct vdso_image *image)
 {
 	BUG_ON(image->size % PAGE_SIZE != 0);
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+	hlat_vdso_workaround_prepare(image);
+#endif
 
 	apply_alternatives((struct alt_instr *)(image->data + image->alt),
 			   (struct alt_instr *)(image->data + image->alt +
