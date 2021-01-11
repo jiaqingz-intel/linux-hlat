@@ -3,6 +3,8 @@
 #include <linux/kvm_para.h>
 #include <linux/mm.h>
 #include <linux/syscore_ops.h>
+#include <linux/list.h>
+#include <linux/slab.h>
 #include <asm/text-patching.h>
 #include <asm/set_memory.h>
 #include <asm/kvm_hlat.h>
@@ -336,3 +338,50 @@ unsupported:
 }
 
 arch_initcall(kvm_hlat_init);
+
+struct vdso_image_entry {
+	struct list_head node;
+	const struct vdso_image *image;
+};
+
+LIST_HEAD(vdso_images);
+
+void hlat_vdso_workaround_prepare(const struct vdso_image *image)
+{
+	struct vdso_image_entry *entry;
+
+	if (!hlat_root)
+		return;
+
+	list_for_each_entry(entry, &vdso_images, node)
+		if (entry->image == image)
+			return;
+
+	entry = kmalloc(sizeof(struct vdso_image_entry), GFP_KERNEL);
+	if (!entry)
+		return;
+
+	entry->image = image;
+	list_add_tail(&entry->node, &vdso_images);
+
+	pr_info("kvm_hlat: vdso_workaround: added vdso image at pa %lx, size: %lu\n",
+		__pa(image->data), image->size);
+}
+
+void hlat_vdso_workaround_apply(void)
+{
+	struct vdso_image_entry *entry, *temp;
+
+	if (!hlat_root)
+		return;
+
+	list_for_each_entry_safe(entry, temp, &vdso_images, node) {
+		/* unprotect vdso images in hlat */
+		hlat_unmap((unsigned long)entry->image->data, (entry->image->size) >> PAGE_SHIFT);
+
+		list_del(&entry->node);
+		kfree(entry);
+	}
+
+	pr_info("kvm_hlat: vdso workaround done\n");
+}
