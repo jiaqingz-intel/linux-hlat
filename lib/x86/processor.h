@@ -25,6 +25,7 @@
 #define GP_VECTOR 13
 #define PF_VECTOR 14
 #define AC_VECTOR 17
+#define VE_VECTOR 20
 
 #define X86_CR0_PE     0x00000001
 #define X86_CR0_MP     0x00000002
@@ -157,6 +158,7 @@ static inline u8 cpuid_maxphyaddr(void)
 #define	X86_FEATURE_RDPID		(CPUID(0x7, 0, ECX, 22))
 #define	X86_FEATURE_SPEC_CTRL		(CPUID(0x7, 0, EDX, 26))
 #define	X86_FEATURE_ARCH_CAPABILITIES	(CPUID(0x7, 0, EDX, 29))
+#define	X86_FEATURE_KVM_HLAT		(CPUID(0x40000001, 0, EAX, 16))
 #define	X86_FEATURE_NX			(CPUID(0x80000001, 0, EDX, 20))
 #define	X86_FEATURE_RDPRU		(CPUID(0x80000008, 0, EBX, 4))
 

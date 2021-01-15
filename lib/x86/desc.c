@@ -64,6 +64,7 @@ static const char* exception_mnemonic(int vector)
 	case 17: return "#AC";
 	case 18: return "#MC";
 	case 19: return "#XM";
+	case 20: return "#VE";
 	default: return "#??";
 	}
 }
@@ -179,6 +180,7 @@ EX(mf, 16);
 EX_E(ac, 17);
 EX(mc, 18);
 EX(xm, 19);
+EX(ve, 20);
 
 asm (".pushsection .text \n\t"
      "__handle_exception: \n\t"
@@ -224,6 +226,7 @@ static void *idt_handlers[32] = {
 	[17] = &ac_fault,
 	[18] = &mc_fault,
 	[19] = &xm_fault,
+	[20] = &ve_fault,
 };
 
 void setup_idt(void)

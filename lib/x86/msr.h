@@ -425,6 +425,16 @@
 
 #define MSR_IA32_TSCDEADLINE		0x000006e0
 
+/* KVM HLAT MSR */
+#define MSR_KVM_HLAT_CAP	0x4b564d08
+
+#define HLAT_CAP_MSR_PW_BIT		(1ull << 0)
+#define HLAT_CAP_MSR_VPW_BIT		(1ull << 1)
+#define HLAT_CAP_MSR_HLAT_BIT		(1ull << 2)
+#define HLAT_CAP_MSR_MAX_PLR_MASK	0x1f8
+#define HLAT_CAP_MSR_MAX_PLR_SHIFT	3
+#define HLAT_CAP_RESERVED		(~0x1ffULL)
+
 /* AMD-V MSRs */
 
 #define MSR_VM_CR                       0xc0010114
