@@ -21,6 +21,7 @@
 #define MSR_CTLS3_VPW_BIT	(1ull << 3)
 
 #ifdef CONFIG_KVM_GUEST_HLAT
+void kvm_hlat_reset(void);
 unsigned long hlat_root_va(void);
 void hlat_vdso_workaround_prepare(const struct vdso_image *image);
 void hlat_vdso_workaround_apply(void);

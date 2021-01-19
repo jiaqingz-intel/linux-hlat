@@ -276,8 +276,11 @@ static void kvm_hlat_reset_root(void *data)
 	kvm_hc_hlat_reset_root();
 }
 
-static void kvm_hlat_reset(void)
+void kvm_hlat_reset(void)
 {
+	if (!hlat_root)
+		return;
+
 	kvm_hc_hlat_reset_pat();
 	kvm_hlat_reset_root(NULL);
 	smp_call_function(kvm_hlat_reset_root, NULL, 1);
