@@ -26,6 +26,7 @@
 #include <asm/kexec-bzimage64.h>
 #include <asm/setup.h>
 #include <asm/set_memory.h>
+#include <asm/kvm_hlat.h>
 
 #ifdef CONFIG_ACPI
 /*
@@ -301,6 +302,11 @@ int machine_kexec_prepare(struct kimage *image)
 {
 	unsigned long start_pgtable;
 	int result;
+
+#ifdef CONFIG_KVM_GUEST_HLAT
+	/* Reset guest hlat paging */
+	kvm_hlat_reset();
+#endif
 
 	/* Calculate the offsets */
 	start_pgtable = page_to_pfn(image->control_code_page) << PAGE_SHIFT;
