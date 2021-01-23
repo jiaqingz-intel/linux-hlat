@@ -75,6 +75,13 @@
 #define SECONDARY_EXEC_TSC_SCALING              VMCS_CONTROL_BIT(TSC_SCALING)
 #define SECONDARY_EXEC_ENABLE_USR_WAIT_PAUSE	VMCS_CONTROL_BIT(USR_WAIT_PAUSE)
 
+/*
+ * Definitions of Tertiary Processor-Based VM-Execution Controls.
+ */
+#define TERTIARY_EXEC_HLAT			VMCS_CONTROL_BIT(HLAT)
+#define TERTIARY_EXEC_EPT_PW			VMCS_CONTROL_BIT(EPT_PW)
+#define TERTIARY_EXEC_EPT_VPW			VMCS_CONTROL_BIT(EPT_VPW)
+
 #define PIN_BASED_EXT_INTR_MASK                 VMCS_CONTROL_BIT(INTR_EXITING)
 #define PIN_BASED_NMI_EXITING                   VMCS_CONTROL_BIT(NMI_EXITING)
 #define PIN_BASED_VIRTUAL_NMIS                  VMCS_CONTROL_BIT(VIRTUAL_NMIS)
@@ -157,6 +164,7 @@ static inline int vmx_misc_mseg_revid(u64 vmx_misc)
 enum vmcs_field {
 	VIRTUAL_PROCESSOR_ID            = 0x00000000,
 	POSTED_INTR_NV                  = 0x00000002,
+	HLAT_PLR_PREFIX_SIZE		= 0x00000006,
 	GUEST_ES_SELECTOR               = 0x00000800,
 	GUEST_CS_SELECTOR               = 0x00000802,
 	GUEST_SS_SELECTOR               = 0x00000804,
@@ -222,6 +230,8 @@ enum vmcs_field {
 	TSC_MULTIPLIER_HIGH             = 0x00002033,
 	TERTIARY_VM_EXEC_CONTROL        = 0x00002034,
 	TERTIARY_VM_EXEC_CONTROL_HIGH   = 0x00002035,
+	HLAT_POINTER			= 0x00002040,
+	HLAT_POINTER_HIGH		= 0x00002041,
 	GUEST_PHYSICAL_ADDRESS          = 0x00002400,
 	GUEST_PHYSICAL_ADDRESS_HIGH     = 0x00002401,
 	VMCS_LINK_POINTER               = 0x00002800,
@@ -483,6 +493,8 @@ enum vmcs_field {
 #define VMX_VPID_EXTENT_SINGLE_CONTEXT_BIT      (1ull << 9) /* (41 - 32) */
 #define VMX_VPID_EXTENT_GLOBAL_CONTEXT_BIT      (1ull << 10) /* (42 - 32) */
 #define VMX_VPID_EXTENT_SINGLE_NON_GLOBAL_BIT   (1ull << 11) /* (43 - 32) */
+#define VMX_VPID_HLAT_PLR_MAX_PREFIX_MASK       0x3f0000     /* (53:48) - 32, 6bits */
+#define VMX_VPID_HLAT_PLR_MAX_PREFIX_SHIFT      16           /* (48 - 32) */
 
 #define VMX_EPT_MT_EPTE_SHIFT			3
 #define VMX_EPTP_PWL_MASK			0x38ull
@@ -502,6 +514,8 @@ enum vmcs_field {
 						 VMX_EPT_WRITABLE_MASK |       \
 						 VMX_EPT_EXECUTABLE_MASK)
 #define VMX_EPT_MT_MASK				(7ull << VMX_EPT_MT_EPTE_SHIFT)
+#define VMX_EPT_PW_BIT				(1ull << 58)
+#define VMX_EPT_VPW_BIT				(1ull << 57)
 
 static inline u8 vmx_eptp_page_walk_level(u64 eptp)
 {
@@ -547,6 +561,7 @@ enum vm_entry_failure_code {
 #define EPT_VIOLATION_WRITABLE_BIT	4
 #define EPT_VIOLATION_EXECUTABLE_BIT	5
 #define EPT_VIOLATION_GVA_TRANSLATED_BIT 8
+#define EPT_VIOLATION_VPW_BIT		15
 #define EPT_VIOLATION_ACC_READ		(1 << EPT_VIOLATION_ACC_READ_BIT)
 #define EPT_VIOLATION_ACC_WRITE		(1 << EPT_VIOLATION_ACC_WRITE_BIT)
 #define EPT_VIOLATION_ACC_INSTR		(1 << EPT_VIOLATION_ACC_INSTR_BIT)
@@ -554,6 +569,7 @@ enum vm_entry_failure_code {
 #define EPT_VIOLATION_WRITABLE		(1 << EPT_VIOLATION_WRITABLE_BIT)
 #define EPT_VIOLATION_EXECUTABLE	(1 << EPT_VIOLATION_EXECUTABLE_BIT)
 #define EPT_VIOLATION_GVA_TRANSLATED	(1 << EPT_VIOLATION_GVA_TRANSLATED_BIT)
+#define EPT_VIOLATION_VPW		(1 << EPT_VIOLATION_VPW_BIT)
 
 /*
  * VM-instruction error numbers
