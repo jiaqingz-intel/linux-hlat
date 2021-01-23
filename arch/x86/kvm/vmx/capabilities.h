@@ -415,4 +415,25 @@ static inline u64 vmx_supported_debugctl(void)
 	return debugctl;
 }
 
+static inline bool cpu_has_vmx_hlat(void)
+{
+	return vmcs_config.cpu_based_3rd_exec_ctrl & TERTIARY_EXEC_HLAT;
+}
+
+static inline bool cpu_has_vmx_ept_pw_bit(void)
+{
+	return vmcs_config.cpu_based_3rd_exec_ctrl & TERTIARY_EXEC_EPT_PW;
+}
+
+static inline bool cpu_has_vmx_ept_vpw_bit(void)
+{
+	return vmcs_config.cpu_based_3rd_exec_ctrl & TERTIARY_EXEC_EPT_VPW;
+}
+
+static inline u16 vmx_hlat_plr_max_prefix(void)
+{
+	return (vmx_capability.vpid & VMX_VPID_HLAT_PLR_MAX_PREFIX_MASK)
+			>> VMX_VPID_HLAT_PLR_MAX_PREFIX_SHIFT;
+}
+
 #endif /* __KVM_X86_VMX_CAPS_H */

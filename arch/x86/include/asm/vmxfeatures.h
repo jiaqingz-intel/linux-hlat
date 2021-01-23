@@ -86,4 +86,9 @@
 #define VMX_FEATURE_ENCLV_EXITING	( 2*32+ 28) /* "" VM-Exit on ENCLV (leaf dependent) */
 #define VMX_FEATURE_BUS_LOCK_DETECTION	( 2*32+ 30) /* "" VM-Exit when bus lock caused */
 
+/* Tertiary Processor-Based VM-Execution Controls, word 3 */
+#define VMX_FEATURE_HLAT		(3*32 +  1) /* "hlat" Enable HLAT */
+#define VMX_FEATURE_EPT_PW		(3*32 +  2) /* "ept_pw" Enable EPT Paging-Write */
+#define VMX_FEATURE_EPT_VPW		(3*32 +  3) /* "ept_vpw" Enable EPT Verify Paging-Write */
+
 #endif /* _ASM_X86_VMXFEATURES_H */
