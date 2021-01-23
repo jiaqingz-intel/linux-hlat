@@ -2477,6 +2477,23 @@ static __init int adjust_vmx_controls(u32 ctl_min, u32 ctl_opt,
 	return 0;
 }
 
+static __init int adjust_vmx_controls_64(u64 ctl_min, u64 ctl_opt,
+					  u32 msr, u64 *result)
+{
+	u64 vmx_msr;
+	u64 ctl = ctl_min | ctl_opt;
+
+	rdmsrl(msr, vmx_msr);
+	ctl &= vmx_msr; /* bit == 1 means it can be set */
+
+	/* Ensure minimum (required) set of control bits are supported. */
+	if (ctl_min & ~ctl)
+		return -EIO;
+
+	*result = ctl;
+	return 0;
+}
+
 static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf,
 				    struct vmx_capability *vmx_cap)
 {
@@ -2581,6 +2598,25 @@ static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf,
 		pr_warn_once("VPID CAP should not exist if not support "
 				"1-setting enable VPID VM-execution control\n");
 	}
+
+	if (_cpu_based_exec_control & CPU_BASED_ACTIVATE_TERTIARY_CONTROLS) {
+		u64 opt3 = TERTIARY_EXEC_HLAT |
+			   TERTIARY_EXEC_EPT_PW |
+			   TERTIARY_EXEC_EPT_VPW;
+		u64 min3 = 0;
+
+		if (adjust_vmx_controls_64(min3, opt3, MSR_IA32_VMX_PROCBASED_CTLS3,
+			&_cpu_based_3rd_exec_control))
+			return -EIO;
+	}
+
+	/* Disable HLAT/PW/VPW if any of them isn't enabled. */
+	if (!(_cpu_based_3rd_exec_control & TERTIARY_EXEC_HLAT) ||
+	    !(_cpu_based_3rd_exec_control & TERTIARY_EXEC_EPT_PW) ||
+	    !(_cpu_based_3rd_exec_control & TERTIARY_EXEC_EPT_VPW))
+		_cpu_based_3rd_exec_control &= ~(TERTIARY_EXEC_HLAT |
+						 TERTIARY_EXEC_EPT_PW |
+						 TERTIARY_EXEC_EPT_VPW);
 
 	min = VM_EXIT_SAVE_DEBUG_CONTROLS | VM_EXIT_ACK_INTR_ON_EXIT;
 #ifdef CONFIG_X86_64
@@ -4239,7 +4275,8 @@ u32 vmx_exec_control(struct vcpu_vmx *vmx)
 
 static u64 vmx_tertiary_exec_control(struct vcpu_vmx *vmx)
 {
-	return vmcs_config.cpu_based_3rd_exec_ctrl;
+	/* HLAT is enabled when guest requests it explicitly via hypercall */
+	return vmcs_config.cpu_based_3rd_exec_ctrl & ~TERTIARY_EXEC_HLAT;
 }
 
 /*
