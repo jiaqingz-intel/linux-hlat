@@ -30,6 +30,8 @@ struct nested_vmx_msrs {
 	u32 procbased_ctls_high;
 	u32 secondary_ctls_low;
 	u32 secondary_ctls_high;
+	/* Tertiary Controls is 64bit allow-1 semantics */
+	u64 tertiary_ctls;
 	u32 pinbased_ctls_low;
 	u32 pinbased_ctls_high;
 	u32 exit_ctls_low;

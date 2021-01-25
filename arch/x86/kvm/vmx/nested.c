@@ -1285,6 +1285,13 @@ vmx_restore_control_msr(struct vcpu_vmx *vmx, u32 msr_index, u64 data)
 		lowp = &vmx->nested.msrs.secondary_ctls_low;
 		highp = &vmx->nested.msrs.secondary_ctls_high;
 		break;
+	/*
+	 * MSR_IA32_VMX_PROCBASED_CTLS3 is 64bit, all allow-1.
+	 * No need to check. Just return.
+	 */
+	case MSR_IA32_VMX_PROCBASED_CTLS3:
+		vmx->nested.msrs.tertiary_ctls = data;
+		return 0;
 	default:
 		BUG();
 	}
@@ -1421,6 +1428,7 @@ int vmx_set_vmx_msr(struct kvm_vcpu *vcpu, u32 msr_index, u64 data)
 	case MSR_IA32_VMX_TRUE_EXIT_CTLS:
 	case MSR_IA32_VMX_TRUE_ENTRY_CTLS:
 	case MSR_IA32_VMX_PROCBASED_CTLS2:
+	case MSR_IA32_VMX_PROCBASED_CTLS3:
 		return vmx_restore_control_msr(vmx, msr_index, data);
 	case MSR_IA32_VMX_MISC:
 		return vmx_restore_vmx_misc(vmx, data);
@@ -1515,6 +1523,9 @@ int vmx_get_vmx_msr(struct nested_vmx_msrs *msrs, u32 msr_index, u64 *pdata)
 		*pdata = vmx_control_msr(
 			msrs->secondary_ctls_low,
 			msrs->secondary_ctls_high);
+		break;
+	case MSR_IA32_VMX_PROCBASED_CTLS3:
+		*pdata = msrs->tertiary_ctls;
 		break;
 	case MSR_IA32_VMX_EPT_VPID_CAP:
 		*pdata = msrs->ept_caps |
@@ -6375,7 +6386,8 @@ void nested_vmx_setup_ctls_msrs(struct nested_vmx_msrs *msrs, u32 ept_caps)
 		CPU_BASED_USE_IO_BITMAPS | CPU_BASED_MONITOR_TRAP_FLAG |
 		CPU_BASED_MONITOR_EXITING | CPU_BASED_RDPMC_EXITING |
 		CPU_BASED_RDTSC_EXITING | CPU_BASED_PAUSE_EXITING |
-		CPU_BASED_TPR_SHADOW | CPU_BASED_ACTIVATE_SECONDARY_CONTROLS;
+		CPU_BASED_TPR_SHADOW | CPU_BASED_ACTIVATE_SECONDARY_CONTROLS |
+		CPU_BASED_ACTIVATE_TERTIARY_CONTROLS;
 	/*
 	 * We can allow some features even when not supported by the
 	 * hardware. For example, L1 can specify an MSR bitmap - and we
@@ -6413,6 +6425,9 @@ void nested_vmx_setup_ctls_msrs(struct nested_vmx_msrs *msrs, u32 ept_caps)
 		SECONDARY_EXEC_RDSEED_EXITING |
 		SECONDARY_EXEC_XSAVES;
 
+	if (msrs->procbased_ctls_high & CPU_BASED_ACTIVATE_TERTIARY_CONTROLS)
+		rdmsrl(MSR_IA32_VMX_PROCBASED_CTLS3,
+		      msrs->tertiary_ctls);
 	/*
 	 * We can emulate "VMCS shadowing," even if the hardware
 	 * doesn't support it.
