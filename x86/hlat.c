@@ -31,7 +31,6 @@ static inline long kvm_hypercall4(unsigned int nr, unsigned long p1,
 #define KVM_VMX_SET_HLAT		0x00
 #define KVM_HLAT_RESET_PAT		0x01
 #define KVM_VMX_SET_EPT_PW		0x02
-#define KVM_VMX_CLEAR_EPT_VPW   0x03
 #define KVM_HLAT_CREATE_PXD		0x11
 #define KVM_HLAT_MAP			0x12
 #define KVM_HLAT_UNMAP			0x13
@@ -49,11 +48,6 @@ static inline long kvm_hc_hlat_reset_pat(void)
 static inline long kvm_hc_vmx_set_ept_pw(phys_addr_t pa)
 {
 	return kvm_hypercall4(KVM_HC_HLAT, KVM_VMX_SET_EPT_PW, pa >> PAGE_SHIFT, 0, 0);
-}
-
-static inline long kvm_hc_vmx_clear_ept_vpw(phys_addr_t pa)
-{
-	return kvm_hypercall4(KVM_HC_HLAT, KVM_VMX_CLEAR_EPT_VPW, pa >> PAGE_SHIFT, 0, 0);
 }
 
 static inline long kvm_hc_hlat_map_pte(phys_addr_t pte_pa, pteval_t pteval)
@@ -189,7 +183,7 @@ static void test3(void)
 	force_4k_page(page);
 	force_4k_page(pgtable);
 
-	printf("=== test 3: ept pw/vpw ===\n");
+	printf("=== test 3: ept pw ===\n");
 
 	report(write_and_verify(&wav), "write non-ept pw/vpw page");
 
@@ -200,14 +194,6 @@ static void test3(void)
 	kvm_hc_hlat_reset_pat();
 
 	assert(!kvm_hc_hlat_create_pxd(0, virt_to_phys(pgtable)));
-	assert(!kvm_hc_hlat_map_pte(virt_to_phys(pte), pteval));
-
-	report(test_for_exception(VE_VECTOR, _write_and_verify, &wav), "write ept vpw page");
-
-	report(!kvm_hc_vmx_clear_ept_vpw(virt_to_phys(page)), "clear ept vpw on page (hypercall)");
-
-	report(write_and_verify(&wav), "write page after clearing ept vpw");
-
 	assert(!kvm_hc_hlat_map_pte(virt_to_phys(pte), pteval));
 
 	report(test_for_exception(VE_VECTOR, _write_and_verify, &wav), "write ept vpw page");
