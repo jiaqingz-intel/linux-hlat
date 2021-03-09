@@ -225,24 +225,25 @@ static void test3(void)
 
 int main(int ac, char **av)
 {
-	u64 msr;
+	u64 msr_ctls3, msr_vpid;
 
 	setup_vm();
 
 	if (!this_cpu_has(X86_FEATURE_KVM_HLAT)) {
-		printf("cpuid: hypervisor HLAT support detected\n");
+		printf("cpuid: hypervisor HLAT support not detected\n");
 		return 0;
 	}
 	printf("cpuid: hypervisor HLAT support detected\n");
 
-	msr = rdmsr(MSR_KVM_HLAT_CAP);
-	printf("msr: raw value: %lx\n", msr);
-	printf("  EPT PW : %s\n", msr & HLAT_CAP_MSR_PW_BIT ? "supported" : "unsupported");
-	printf("  EPT VPW: %s\n", msr & HLAT_CAP_MSR_VPW_BIT ? "supported" : "unsupported");
-	printf("  HLAT   : %s\n", msr & HLAT_CAP_MSR_HLAT_BIT ? "supported" : "unsupported");
-	printf("  MAX PLR: %lu\n", (msr & HLAT_CAP_MSR_MAX_PLR_MASK) >> HLAT_CAP_MSR_MAX_PLR_SHIFT);
+	msr_ctls3 = rdmsr(MSR_IA32_VMX_PROCBASED_CTLS3);
+	msr_vpid = rdmsr(MSR_IA32_VMX_EPT_VPID_CAP);
+	printf("MSR_IA32_VMX_PROCBASED_CTLS3: 0x%016lx, MSR_IA32_VMX_EPT_VPID_CAP %016lx\n", msr_ctls3, msr_vpid);
+	printf("  HLAT   : %s\n", msr_ctls3 & MSR_CTLS3_HLAT_BIT ? "supported" : "unsupported");
+	printf("  EPT PW : %s\n", msr_ctls3 & MSR_CTLS3_PW_BIT ? "supported" : "unsupported");
+	printf("  EPT VPW: %s\n", msr_ctls3 & MSR_CTLS3_VPW_BIT ? "supported" : "unsupported");
+	printf("  MAX PLR: %lu\n", (msr_vpid >> 48) & 0x3f);
 
-	if (!(msr & (HLAT_CAP_MSR_PW_BIT | HLAT_CAP_MSR_VPW_BIT | HLAT_CAP_MSR_HLAT_BIT))) {
+	if (!(msr_ctls3 & (MSR_CTLS3_HLAT_BIT | MSR_CTLS3_PW_BIT | MSR_CTLS3_VPW_BIT))) {
 		printf("msr: hlat unsupported, exit\n");
 		return 0;
 	}
