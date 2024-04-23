@@ -1,0 +1,91 @@
+diff --git a/arch/x86/include/asm/kvm_hlat.h b/arch/x86/include/asm/kvm_hlat.h
+index a891ccfd1c67..5d1087cc4e71 100644
+--- a/arch/x86/include/asm/kvm_hlat.h
++++ b/arch/x86/include/asm/kvm_hlat.h
+@@ -25,7 +25,7 @@ void kvm_hlat_reset(void);
+ unsigned long hlat_root_va(void);
+ void hlat_vdso_workaround_prepare(const struct vdso_image *image);
+ void hlat_vdso_workaround_apply(void);
+-int hlat_set_ro(unsigned long addr, int numpages);
++extern int hlat_set_ro(unsigned long addr, int numpages);
+ int hlat_set_rw(unsigned long addr, int numpages);
+ int hlat_set_x(unsigned long addr, int numpages);
+ int hlat_set_nx(unsigned long addr, int numpages);
+diff --git a/arch/x86/kernel/kvm_hlat.c b/arch/x86/kernel/kvm_hlat.c
+index 30b5198f211c..917cdf8b9cdc 100644
+--- a/arch/x86/kernel/kvm_hlat.c
++++ b/arch/x86/kernel/kvm_hlat.c
+@@ -208,6 +208,7 @@ int hlat_set_ro(unsigned long addr, int numpages)
+ {
+ 	return hlat_attr_clear(addr, numpages, __pgprot(_PAGE_RW));
+ }
++EXPORT_SYMBOL_GPL(hlat_set_ro);
+ 
+ int hlat_set_rw(unsigned long addr, int numpages)
+ {
+diff --git a/arch/x86/mm/pat/set_memory.c b/arch/x86/mm/pat/set_memory.c
+index 156cd235659f..06f888c6f37a 100644
+--- a/arch/x86/mm/pat/set_memory.c
++++ b/arch/x86/mm/pat/set_memory.c
+@@ -1942,11 +1942,13 @@ int set_memory_ro(unsigned long addr, int numpages)
+ {
+ 	return change_page_attr_clear(&addr, numpages, __pgprot(_PAGE_RW), 0);
+ }
++EXPORT_SYMBOL_GPL(set_memory_ro);
+ 
+ int set_memory_rw(unsigned long addr, int numpages)
+ {
+ 	return change_page_attr_set(&addr, numpages, __pgprot(_PAGE_RW), 0);
+ }
++EXPORT_SYMBOL_GPL(set_memory_rw);
+ 
+ int set_memory_np(unsigned long addr, int numpages)
+ {
+diff --git a/include/asm-generic/set_memory.h b/include/asm-generic/set_memory.h
+index c86abf6bc7ba..9b171d247a5a 100644
+--- a/include/asm-generic/set_memory.h
++++ b/include/asm-generic/set_memory.h
+@@ -5,8 +5,8 @@
+ /*
+  * Functions to change memory attributes.
+  */
+-int set_memory_ro(unsigned long addr, int numpages);
+-int set_memory_rw(unsigned long addr, int numpages);
++extern int set_memory_ro(unsigned long addr, int numpages);
++extern int set_memory_rw(unsigned long addr, int numpages);
+ int set_memory_x(unsigned long addr, int numpages);
+ int set_memory_nx(unsigned long addr, int numpages);
+ 
+diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+index 678c13967580..0e258c37c82b 100644
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -2571,6 +2571,16 @@ config TEST_FPU
+ 
+ 	  If unsure, say N.
+ 
++config TEST_HLAT
++	tristate "Test HLAT guest driver (DONT USE FOR PRODUCTION)"
++	depends on X86 && KVM_GUEST_HLAT
++	help
++	  Enable this option to test HLAT driver using different CR3 and HLAT PTEs.
++	  Special kernel modifications required.
++	  Never use this feature for production!!!
++
++	  If unsure, say N.
++
+ endif # RUNTIME_TESTING_MENU
+ 
+ config ARCH_USE_MEMTEST
+diff --git a/lib/Makefile b/lib/Makefile
+index 2cc359ec1fdd..fc9fef0152bb 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -99,6 +99,7 @@ obj-$(CONFIG_TEST_MEMINIT) += test_meminit.o
+ obj-$(CONFIG_TEST_LOCKUP) += test_lockup.o
+ obj-$(CONFIG_TEST_HMM) += test_hmm.o
+ obj-$(CONFIG_TEST_FREE_PAGES) += test_free_pages.o
++obj-$(CONFIG_TEST_HLAT) += test_hlat.o
+ 
+ #
+ # CFLAGS for compiling floating point code inside the kernel. x86/Makefile turns

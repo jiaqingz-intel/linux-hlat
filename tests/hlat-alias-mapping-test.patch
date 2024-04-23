@@ -1,0 +1,13 @@
+diff --git a/arch/x86/mm/init_64.c b/arch/x86/mm/init_64.c
+index ddd8b60fd218..0177900928cb 100644
+--- a/arch/x86/mm/init_64.c
++++ b/arch/x86/mm/init_64.c
+@@ -1403,8 +1403,6 @@ void mark_rodata_ro(void)
+ #ifdef CONFIG_KVM_GUEST_HLAT
+ 	// only protect rodata section in hlat
+ 	hlat_set_nx(text_end, (end - text_end) >> PAGE_SHIFT);
+-
+-	hlat_vdso_workaround_apply();
+ #endif
+ 
+ 	set_ftrace_ops_ro();

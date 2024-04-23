@@ -1,0 +1,33 @@
+diff --git a/include/standard-headers/asm-x86/kvm_para.h b/include/standard-headers/asm-x86/kvm_para.h
+index 215d01b4ec..91e2fc53ce 100644
+--- a/include/standard-headers/asm-x86/kvm_para.h
++++ b/include/standard-headers/asm-x86/kvm_para.h
+@@ -33,6 +33,7 @@
+ #define KVM_FEATURE_PV_SCHED_YIELD	13
+ #define KVM_FEATURE_ASYNC_PF_INT	14
+ #define KVM_FEATURE_MSI_EXT_DEST_ID	15
++#define KVM_FEATURE_HLAT		16
+ 
+ #define KVM_HINTS_REALTIME      0
+ 
+diff --git a/target/i386/cpu.c b/target/i386/cpu.c
+index ad99cad0e7..21ebf51a42 100644
+--- a/target/i386/cpu.c
++++ b/target/i386/cpu.c
+@@ -804,7 +804,7 @@ static FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
+             "kvm-asyncpf", "kvm-steal-time", "kvm-pv-eoi", "kvm-pv-unhalt",
+             NULL, "kvm-pv-tlb-flush", NULL, "kvm-pv-ipi",
+             "kvm-poll-control", "kvm-pv-sched-yield", "kvm-asyncpf-int", "kvm-msi-ext-dest-id",
+-            NULL, NULL, NULL, NULL,
++            "kvm-hlat", NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL,
+             "kvmclock-stable-bit", NULL, NULL, NULL,
+             NULL, NULL, NULL, NULL,
+@@ -4264,6 +4264,7 @@ static PropValue kvm_default_props[] = {
+     { "acpi", "off" },
+     { "monitor", "off" },
+     { "svm", "off" },
++    { "kvm-hlat", "off" },
+     { NULL, NULL },
+ };
+ 
